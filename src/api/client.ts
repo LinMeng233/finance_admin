@@ -1,4 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
+import { ElMessage } from 'element-plus'
 
 export interface ApiResult<T> {
   code: number
@@ -61,6 +62,16 @@ api.interceptors.response.use(
         if (location.pathname !== '/login') location.assign('/login')
       }
     }
+    const responseMessage = error.response?.data?.message
+    const message =
+      typeof responseMessage === 'string' && responseMessage.trim()
+        ? responseMessage
+        : error.code === 'ECONNABORTED'
+          ? '请求超时，请稍后重试'
+          : error.response
+            ? `请求失败（HTTP ${error.response.status}）`
+            : '网络连接失败，请检查服务状态'
+    ElMessage.error(message)
     return Promise.reject(error)
   },
 )

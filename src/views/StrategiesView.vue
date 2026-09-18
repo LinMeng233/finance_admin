@@ -353,6 +353,12 @@ async function openEdit(row: Strategy) {
   })
   dialog.value = true
 }
+async function openCopy(row: Strategy) {
+  await openEdit(row)
+  if (!dialog.value) return
+  editing.value = null
+  form.name = `${row.name} copy`
+}
 async function toggle(row: Strategy) {
   await api.post(`/strategy/${row.id}/updateStrategyStatus`, {
     expectedVersion: row.configVersion,
@@ -471,10 +477,12 @@ onMounted(() => {
             s.row.status === 'ACTIVE' ? '启用' : '暂停'
           }}</el-tag></template
         ></el-table-column
-      ><el-table-column label="操作" width="260"
+      ><el-table-column label="操作" width="310"
         ><template #default="s"
           ><el-button v-if="session.can('strategy:update')" link @click="openEdit(s.row)"
             >编辑</el-button
+          ><el-button v-if="session.can('strategy:create')" link @click="openCopy(s.row)"
+            >复制创建</el-button
           ><el-button v-if="session.can('strategy:toggle')" link @click="toggle(s.row)">{{
             s.row.status === 'ACTIVE' ? '暂停' : '启用'
           }}</el-button
