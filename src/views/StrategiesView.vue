@@ -88,6 +88,10 @@ const form = reactive({
   remark: '',
 })
 const isSma = computed(() => form.signalType === 'SMA_CROSS')
+const isStrongSma = computed(() =>
+  ['MA5_MA20_STRONG_UP', 'MA5_MA20_STRONG_DOWN'].includes(form.signalType),
+)
+const hasMaPeriods = computed(() => isSma.value || isStrongSma.value)
 const watchlistProducts = computed(() =>
   products.value.filter((product) =>
     subscriptions.value.some(
@@ -125,8 +129,8 @@ const signalTypes = [
   ['MA5_MA20_ANY', '五日与二十日均线双向交叉'],
   ['MA5_MA20_UP', '五日与二十日均线金叉'],
   ['MA5_MA20_DOWN', '五日与二十日均线死叉'],
-  ['MA5_MA20_STRONG_UP', '强金叉'],
-  ['MA5_MA20_STRONG_DOWN', '强死叉'],
+  ['MA5_MA20_STRONG_UP', '强势金叉'],
+  ['MA5_MA20_STRONG_DOWN', '强势死叉'],
   ['MACD_FIRST_UP', '指标零轴上首次金叉'],
   ['MACD_FIRST_DOWN', '指标零轴下首次死叉'],
   ['COMBINATION_UP', '均线与指标多头组合'],
@@ -214,8 +218,12 @@ function body() {
     timeframe: form.timeframe,
     signalType: form.signalType,
     parameters: {
-      ...(isSma.value
-        ? { fastPeriod: form.fastPeriod, slowPeriod: form.slowPeriod, direction: form.direction }
+      ...(hasMaPeriods.value
+        ? {
+            fastPeriod: form.fastPeriod,
+            slowPeriod: form.slowPeriod,
+            ...(isSma.value ? { direction: form.direction } : {}),
+          }
         : {}),
       ...(form.signalType === 'COMPOSITE'
         ? {
@@ -244,6 +252,10 @@ function body() {
   }
 }
 async function save() {
+  if (hasMaPeriods.value && form.fastPeriod >= form.slowPeriod) {
+    ElMessage.warning('短期均线周期必须小于长期均线周期')
+    return
+  }
   if (
     form.targetMode === 'WATCHLIST' &&
     (!form.productCodes.length ||
@@ -563,12 +575,12 @@ onMounted(() => {
               :key="item[0]"
               :label="item[1]"
               :value="item[0]" /></el-select></el-form-item
-        ><template v-if="isSma"
+        ><template v-if="hasMaPeriods"
           ><el-form-item label="均线周期"
             ><el-input-number v-model="form.fastPeriod" :min="2" :max="499" />
             <span class="field-gap">—</span>
             <el-input-number v-model="form.slowPeriod" :min="3" :max="500" /></el-form-item
-          ><el-form-item label="方向"
+          ><el-form-item v-if="isSma" label="方向"
             ><el-radio-group v-model="form.direction"
               ><el-radio value="ANY">双向</el-radio><el-radio value="UP">金叉</el-radio
               ><el-radio value="DOWN">死叉</el-radio></el-radio-group
